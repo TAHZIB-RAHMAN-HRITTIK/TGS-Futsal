@@ -41,7 +41,7 @@ export default function RootLayout({
         <header className="bg-pitch text-bone">
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
             <Link href="/" className="font-display text-lg tracking-tight leading-tight">
-              Abdur Rahim Memorial Futsal
+              Gregorian Abdur Rahim Memorial Futsal
               <span className="block text-xs font-sans font-normal text-turf">
                 The Gregorian Society · 2026
               </span>
