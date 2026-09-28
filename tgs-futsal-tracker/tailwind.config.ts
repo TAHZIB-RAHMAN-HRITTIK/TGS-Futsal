@@ -5,11 +5,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        pitch: {
-          DEFAULT: "#0F3D2E",
-          dark: "#0A2B20",
-          line: "#1E5A44",
-        },
+        // Theme: white + sky blue (sampled from the Gregorians logo)
         sky: "#2C84B6", // exact logo blue: borders, big fills
         pitch: { DEFAULT: "#1F6A99", dark: "#175578", line: "#2C84B6" }, // buttons
         turf: "#1F6A99", // blue used for small text/headings (readable on white)
@@ -22,9 +18,6 @@ const config: Config = {
       fontFamily: {
         display: ["var(--font-score)", "sans-serif"],
         sans: ["var(--font-body)", "sans-serif"],
-      },
-      fontFeatureSettings: {
-        tabular: '"tnum"',
       },
     },
   },
