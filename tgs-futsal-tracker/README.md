@@ -57,6 +57,15 @@ and open it to enter goals/cards/stats — the public pages update instantly.
 4. Deploy. That's it — Vercel builds and hosts it, and it'll be live at a
    `*.vercel.app` URL you can share.
 
+## Knockouts fill in automatically
+
+`supabase/fixtures.sql` sets up the custom schedule. Semi-finals and the final
+start as TBD ("Group A 1st vs Group B 2nd"). The site fills in the real teams
+by itself: semis from the group standings once a group's matches are all
+completed, and the final from the semi winners. If teams are level on points,
+goal difference and goals scored, or a semi ends level, that slot stays TBD —
+set it by hand with the SQL at the bottom of `fixtures.sql`.
+
 ## How the rating is calculated
 
 `lib/ratings.ts` implements exactly what you specified:
