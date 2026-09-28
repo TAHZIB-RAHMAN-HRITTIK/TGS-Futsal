@@ -15,9 +15,9 @@ const body = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Abdur Rahim Memorial Futsal 2026",
+  title: "Gregorian Abdur Rahim Memorial Futsal 2026",
   description:
-    "Live scores, fixtures, standings and player stats for the TGS Gregorian Abdur Rahim Memorial Futsal Tournament 2026.",
+    "TGS presents Gregorian Abdur Rahim Memorial Futsal Tournament 2026.",
 };
 
 const NAV_LINKS = [
