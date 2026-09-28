@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/groups", label: "Groups" },
-  { href: "/teams", label: "Teams" },
+  { href: "/teams", label: "Player List" },
   { href: "/standings", label: "Standings" },
   { href: "/fixtures", label: "Fixtures" },
   { href: "/results", label: "Results" },
