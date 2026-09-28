@@ -1,3 +1,4 @@
+import { homeName, awayName, stageLabel } from "@/lib/labels";
 import { notFound } from "next/navigation";
 import { getMatchById } from "@/lib/data";
 import { calculateRating } from "@/lib/ratings";
@@ -32,15 +33,15 @@ export default async function MatchPage({ params }: { params: { id: string } }) 
 
       <section className="text-center border-b border-[#DAD6C8] pb-6">
         <p className="text-xs uppercase tracking-wide text-[#5B6B62] mb-2">
-          {match.stage === "group" ? `Group ${match.group_name}` : match.stage} ·{" "}
+          {stageLabel(match)} ·{" "}
           {formatKickoff(match.kickoff_at)}
         </p>
         <div className="flex items-center justify-center gap-6 font-display text-3xl sm:text-4xl text-ink">
-          <span className="text-right w-40 sm:w-56 truncate">{match.home_team?.name}</span>
+          <span className="text-right w-40 sm:w-56 truncate">{homeName(match)}</span>
           <span className="tabular-nums">
             {match.status === "upcoming" ? "vs" : `${match.home_score} – ${match.away_score}`}
           </span>
-          <span className="text-left w-40 sm:w-56 truncate">{match.away_team?.name}</span>
+          <span className="text-left w-40 sm:w-56 truncate">{awayName(match)}</span>
         </div>
         <div className="mt-3 flex justify-center">
           <StatusBadge status={match.status} />
@@ -55,12 +56,12 @@ export default async function MatchPage({ params }: { params: { id: string } }) 
       {stats.length > 0 ? (
         <>
           <TeamStatTable
-            teamName={match.home_team?.name ?? "Home"}
+            teamName={homeName(match)}
             stats={homeStats}
             motmId={match.motm_player_id}
           />
           <TeamStatTable
-            teamName={match.away_team?.name ?? "Away"}
+            teamName={awayName(match)}
             stats={awayStats}
             motmId={match.motm_player_id}
           />

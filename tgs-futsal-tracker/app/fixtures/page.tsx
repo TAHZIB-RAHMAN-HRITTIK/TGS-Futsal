@@ -1,3 +1,4 @@
+import { homeName, awayName, stageLabel } from "@/lib/labels";
 import Link from "next/link";
 import { getMatches } from "@/lib/data";
 import StatusBadge from "@/components/StatusBadge";
@@ -43,9 +44,9 @@ export default async function FixturesPage() {
                   <li key={m.id} className="py-3">
                     <Link href={`/match/${m.id}`} className="flex items-center justify-between gap-4">
                       <span className="flex-1">
-                        {m.home_team?.name}{" "}
+                        {homeName(m)}{" "}
                         <span className="text-[#5B6B62]">vs</span>{" "}
-                        {m.away_team?.name}
+                        {awayName(m)}
                       </span>
                       <span className="text-xs text-[#5B6B62] whitespace-nowrap">
                         {m.group_name ? `Grp ${m.group_name} · ` : ""}

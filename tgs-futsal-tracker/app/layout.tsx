@@ -15,9 +15,9 @@ const body = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Gregorian Abdur Rahim Memorial Futsal 2026",
+  title: "Abdur Rahim Memorial Futsal 2026",
   description:
-    "TGS presents Gregorian Abdur Rahim Memorial Futsal Tournament 2026.",
+    "Live scores, fixtures, standings and player stats for the TGS Gregorian Abdur Rahim Memorial Futsal Tournament 2026.",
 };
 
 const NAV_LINKS = [
@@ -28,6 +28,7 @@ const NAV_LINKS = [
   { href: "/fixtures", label: "Fixtures" },
   { href: "/results", label: "Results" },
   { href: "/players", label: "Player Stats" },
+  { href: "/squads", label: "Squads" },
 ];
 
 export default function RootLayout({
@@ -38,12 +39,18 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${score.variable} ${body.variable}`}>
       <body className="font-sans min-h-screen flex flex-col">
-        <header className="bg-pitch text-bone">
+        <header className="bg-white text-ink border-b-4 border-sky">
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-            <Link href="/" className="font-display text-lg tracking-tight leading-tight">
-              Gregorian Abdur Rahim Memorial Futsal
-              <span className="block text-xs font-sans font-normal text-turf">
-                The Gregorian Society · 2026
+            <Link
+              href="/"
+              className="flex items-center gap-3 font-display text-lg tracking-tight leading-tight"
+            >
+              <img src="/crest.png" alt="Gregorians crest" className="h-11 w-auto" />
+              <span>
+                Abdur Rahim Memorial Futsal
+                <span className="block text-xs font-sans font-normal text-turf">
+                  The Gregorian Society · 2026
+                </span>
               </span>
             </Link>
             <nav className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
@@ -51,7 +58,7 @@ export default function RootLayout({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="hover:text-amber transition-colors"
+                  className="font-medium hover:text-turf transition-colors"
                 >
                   {link.label}
                 </Link>

@@ -7,8 +7,8 @@
 }
 
 body {
-  background-color: #F6F4EE;
-  color: #11201A;
+  background-color: #FFFFFF;
+  color: #0E2A3F;
 }
 
 .stat-table {
@@ -24,12 +24,12 @@ body {
   letter-spacing: 0.01em;
   color: #5B6B62;
   padding: 0.5rem 0.75rem;
-  border-bottom: 2px solid #11201A;
+  border-bottom: 2px solid #0E2A3F;
 }
 
 .stat-table td {
   padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid #DAD6C8;
+  border-bottom: 1px solid #D6E3EC;
 }
 
 .stat-table tr:last-child td {
@@ -37,7 +37,7 @@ body {
 }
 
 .stat-table tbody tr:hover {
-  background-color: #EDEAE0;
+  background-color: #EEF5FA;
 }
 
 .live-dot {
@@ -59,6 +59,6 @@ body {
 }
 
 a:focus-visible, button:focus-visible, input:focus-visible {
-  outline: 2px solid #F2B705;
+  outline: 2px solid #2C84B6;
   outline-offset: 2px;
 }

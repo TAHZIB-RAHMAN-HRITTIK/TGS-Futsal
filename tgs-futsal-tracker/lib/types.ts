@@ -21,8 +21,10 @@ export interface Match {
   id: string;
   stage: Stage;
   group_name: GroupName | null;
-  home_team_id: string;
-  away_team_id: string;
+  home_team_id: string | null;
+  away_team_id: string | null;
+  home_label?: string | null; // shown while a team is still TBD, e.g. "Group A 1st"
+  away_label?: string | null;
   home_score: number;
   away_score: number;
   kickoff_at: string;

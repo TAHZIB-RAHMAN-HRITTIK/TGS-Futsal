@@ -1,5 +1,7 @@
 import { supabaseServer } from "./supabase";
 import { calculateRating } from "./ratings";
+import { buildStandings } from "./standings";
+import { resolveKnockouts } from "./knockouts";
 import type {
   Team,
   Player,
@@ -25,7 +27,7 @@ export async function getPlayers(teamId?: string): Promise<Player[]> {
   return data as Player[];
 }
 
-export async function getMatches(): Promise<Match[]> {
+async function fetchMatchesRaw(): Promise<Match[]> {
   const sb = supabaseServer();
   const { data, error } = await sb
     .from("matches")
@@ -37,100 +39,33 @@ export async function getMatches(): Promise<Match[]> {
   return data as unknown as Match[];
 }
 
+/** All matches, with knockout teams filled in automatically from standings. */
+export async function getMatches(): Promise<Match[]> {
+  const [matches, teams] = await Promise.all([fetchMatchesRaw(), getTeams()]);
+  return resolveKnockouts(matches, teams);
+}
+
 export async function getMatchById(id: string): Promise<{
   match: Match;
   stats: MatchStat[];
 } | null> {
-  const sb = supabaseServer();
-  const { data: match, error: matchErr } = await sb
-    .from("matches")
-    .select(
-      "*, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*), motm_player:players(*)"
-    )
-    .eq("id", id)
-    .single();
-  if (matchErr) return null;
+  const match = (await getMatches()).find((m) => m.id === id);
+  if (!match) return null;
 
+  const sb = supabaseServer();
   const { data: stats, error: statsErr } = await sb
     .from("match_stats")
     .select("*, player:players(*)")
     .eq("match_id", id);
   if (statsErr) throw statsErr;
 
-  return { match: match as unknown as Match, stats: stats as unknown as MatchStat[] };
+  return { match, stats: stats as unknown as MatchStat[] };
 }
 
 /** Group-stage standings only, computed from completed matches. */
 export async function getStandings(): Promise<Record<GroupName, StandingRow[]>> {
-  const teams = await getTeams();
-  const matches = (await getMatches()).filter(
-    (m) => m.stage === "group" && m.status === "completed"
-  );
-
-  const table: Record<string, StandingRow> = {};
-  for (const team of teams) {
-    table[team.id] = {
-      team,
-      played: 0,
-      won: 0,
-      drawn: 0,
-      lost: 0,
-      goals_for: 0,
-      goals_against: 0,
-      goal_diff: 0,
-      points: 0,
-    };
-  }
-
-  for (const m of matches) {
-    const home = table[m.home_team_id];
-    const away = table[m.away_team_id];
-    if (!home || !away) continue;
-
-    home.played += 1;
-    away.played += 1;
-    home.goals_for += m.home_score;
-    home.goals_against += m.away_score;
-    away.goals_for += m.away_score;
-    away.goals_against += m.home_score;
-
-    if (m.home_score > m.away_score) {
-      home.won += 1;
-      home.points += 3;
-      away.lost += 1;
-    } else if (m.home_score < m.away_score) {
-      away.won += 1;
-      away.points += 3;
-      home.lost += 1;
-    } else {
-      home.drawn += 1;
-      away.drawn += 1;
-      home.points += 1;
-      away.points += 1;
-    }
-  }
-
-  for (const row of Object.values(table)) {
-    row.goal_diff = row.goals_for - row.goals_against;
-  }
-
-  const sortRows = (rows: StandingRow[]) =>
-    rows.sort(
-      (a, b) =>
-        b.points - a.points ||
-        b.goal_diff - a.goal_diff ||
-        b.goals_for - a.goals_for ||
-        a.team.name.localeCompare(b.team.name)
-    );
-
-  return {
-    A: sortRows(
-      Object.values(table).filter((r) => r.team.group_name === "A")
-    ),
-    B: sortRows(
-      Object.values(table).filter((r) => r.team.group_name === "B")
-    ),
-  };
+  const [teams, matches] = await Promise.all([getTeams(), fetchMatchesRaw()]);
+  return buildStandings(teams, matches);
 }
 
 export interface PlayerLeaderboardRow {

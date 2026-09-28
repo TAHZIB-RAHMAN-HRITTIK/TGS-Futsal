@@ -1,58 +1,136 @@
 import Link from "next/link";
 import { getMatches } from "@/lib/data";
-import { logoutAdmin, updateMatchStatus } from "@/lib/actions";
+import { logoutAdmin, updateMatchStatus, generateKnockouts } from "@/lib/actions";
+import { homeName, awayName, stageLabel } from "@/lib/labels";
+import SavedBanner from "@/components/SavedBanner";
 
 export const revalidate = 0;
 
-export default async function AdminDashboard() {
+export default async function AdminDashboard({
+  searchParams,
+}: {
+  searchParams: Record<string, string>;
+}) {
   const matches = await getMatches();
 
+  const groupMatches = matches.filter((m) => m.stage === "group");
+  const groupsDone = groupMatches.length > 0 && groupMatches.every((m) => m.status === "completed");
+  const knockouts = matches.filter((m) => m.stage !== "group");
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      <SavedBanner
+        show={searchParams.kgen === "1"}
+        message="✓  Knockout teams locked in from current standings"
+      />
+
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="font-display text-2xl text-ink">Match Control</h1>
         <form action={logoutAdmin}>
-          <button className="text-sm underline text-[#5B6B62]">Log out</button>
+          <button className="text-sm text-[#5B6B62] hover:underline">Log out</button>
         </form>
       </div>
 
       <p className="text-sm text-[#5B6B62]">
-        Set a match live, then open it to enter goals/cards/stats as they
-        happen — the site updates for everyone watching instantly.
+        Set a match live → click its name to enter goals, cards and stats → click
+        Save All when done.
       </p>
 
-      <ul className="divide-y divide-[#DAD6C8]">
-        {matches.map((m) => (
-          <li key={m.id} className="py-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <Link href={`/admin/dashboard/match/${m.id}`} className="font-medium hover:underline">
-                {m.home_team?.name} vs {m.away_team?.name}
-              </Link>
-              <p className="text-xs text-[#5B6B62]">
-                {m.stage === "group" ? `Group ${m.group_name}` : m.stage} · {m.status}
-                {m.status !== "upcoming" && ` · ${m.home_score}–${m.away_score}`}
-              </p>
-            </div>
-            <div className="flex gap-2 text-xs">
-              {(["upcoming", "live", "completed"] as const).map((status) => (
-                <form key={status} action={updateMatchStatus.bind(null, m.id, status)}>
-                  <button
-                    type="submit"
-                    disabled={m.status === status}
-                    className={`px-2 py-1 border ${
-                      m.status === status
-                        ? "bg-pitch text-bone border-pitch"
-                        : "border-[#DAD6C8] hover:border-pitch"
-                    }`}
-                  >
-                    {status}
-                  </button>
-                </form>
-              ))}
-            </div>
-          </li>
-        ))}
-      </ul>
+      {/* ── GROUP STAGE ── */}
+      <section>
+        <h2 className="font-display text-lg text-turf mb-3">Group Stage</h2>
+        <MatchList
+          matches={groupMatches.sort(
+            (a, b) => new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime()
+          )}
+        />
+      </section>
+
+      {/* ── KNOCKOUTS ── */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h2 className="font-display text-lg text-turf">Semi-Finals &amp; Final</h2>
+          {/* Generate button — always shown; safe to run multiple times */}
+          <form action={generateKnockouts}>
+            <button
+              type="submit"
+              className={`text-sm px-4 py-1.5 border transition-colors ${
+                groupsDone
+                  ? "bg-pitch text-bone border-pitch hover:bg-pitch-dark"
+                  : "border-[#D6E3EC] text-[#5B6B62] hover:border-pitch"
+              }`}
+            >
+              {groupsDone
+                ? "⚡ Auto-fill from standings"
+                : "Auto-fill from standings (run after group stage)"}
+            </button>
+          </form>
+        </div>
+
+        {!groupsDone && (
+          <p className="text-xs text-[#5B6B62]">
+            Group A 1st vs Group B 2nd and Group B 1st vs Group A 2nd will be
+            filled in automatically once all 30 group matches are completed.
+          </p>
+        )}
+
+        <MatchList
+          matches={knockouts.sort(
+            (a, b) => new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime()
+          )}
+        />
+      </section>
     </div>
+  );
+}
+
+function MatchList({
+  matches,
+}: {
+  matches: Awaited<ReturnType<typeof getMatches>>;
+}) {
+  if (matches.length === 0)
+    return <p className="text-sm text-[#5B6B62]">No matches yet.</p>;
+
+  return (
+    <ul className="divide-y divide-[#D6E3EC]">
+      {matches.map((m) => (
+        <li key={m.id} className="py-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <Link
+              href={`/admin/dashboard/match/${m.id}`}
+              className="font-medium hover:text-turf hover:underline"
+            >
+              {homeName(m)} vs {awayName(m)}
+            </Link>
+            <p className="text-xs text-[#5B6B62] mt-0.5">
+              {stageLabel(m)} · {m.status}
+              {m.status !== "upcoming" && ` · ${m.home_score}–${m.away_score}`}
+            </p>
+          </div>
+
+          {/* Quick status toggle */}
+          <div className="flex gap-1.5 text-xs">
+            {(["upcoming", "live", "completed"] as const).map((status) => (
+              <form key={status} action={updateMatchStatus.bind(null, m.id, status)}>
+                <button
+                  type="submit"
+                  disabled={m.status === status}
+                  className={`px-2.5 py-1 border transition-colors ${
+                    m.status === status
+                      ? "bg-pitch text-bone border-pitch"
+                      : "border-[#D6E3EC] hover:border-pitch"
+                  }`}
+                >
+                  {status === "live" ? "🔴" : status === "upcoming" ? "⬜" : "✓"}
+                  {" "}{status}
+                </button>
+              </form>
+            ))}
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }

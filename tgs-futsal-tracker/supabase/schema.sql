@@ -21,8 +21,10 @@ create table matches (
   id uuid primary key default gen_random_uuid(),
   stage text not null check (stage in ('group', 'semi', 'final')),
   group_name text check (group_name in ('A', 'B')),
-  home_team_id uuid not null references teams(id),
-  away_team_id uuid not null references teams(id),
+  home_team_id uuid references teams(id),   -- null while a knockout team is still TBD
+  away_team_id uuid references teams(id),
+  home_label text,                          -- e.g. 'Group A 1st', shown while TBD
+  away_label text,
   home_score int not null default 0,
   away_score int not null default 0,
   kickoff_at timestamptz not null,

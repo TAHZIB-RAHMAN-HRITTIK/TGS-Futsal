@@ -1,3 +1,4 @@
+import { homeName, awayName, stageLabel } from "@/lib/labels";
 import Link from "next/link";
 import { getMatches } from "@/lib/data";
 import LiveRefresher from "@/components/LiveRefresher";
@@ -35,11 +36,11 @@ export default async function ResultsPage() {
         {results.map((m) => (
           <li key={m.id} className="py-3">
             <Link href={`/match/${m.id}`} className="flex items-center justify-between gap-4">
-              <span className="flex-1">{m.home_team?.name}</span>
+              <span className="flex-1">{homeName(m)}</span>
               <span className="font-display text-xl tabular-nums px-3">
                 {m.home_score} – {m.away_score}
               </span>
-              <span className="flex-1 text-right">{m.away_team?.name}</span>
+              <span className="flex-1 text-right">{awayName(m)}</span>
               <span className="text-xs text-[#5B6B62] whitespace-nowrap ml-4">
                 {m.group_name ? `Grp ${m.group_name}` : STAGE_LABEL[m.stage]} ·{" "}
                 {formatDate(m.kickoff_at)}

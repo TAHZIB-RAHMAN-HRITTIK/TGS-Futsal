@@ -1,3 +1,4 @@
+import { homeName, awayName, stageLabel } from "@/lib/labels";
 import Link from "next/link";
 import { getMatches } from "@/lib/data";
 import StatusBadge from "@/components/StatusBadge";
@@ -42,10 +43,12 @@ export default async function HomePage() {
           Dbox Sports Complex · October 2, 2026
         </p>
         <h1 className="font-display text-4xl sm:text-5xl leading-[1.05] text-ink">
-          Gregorian Abdur Rahim Memorial Futsal Tournament
+          Abdur Rahim Memorial Futsal Tournament
         </h1>
         <p className="mt-3 max-w-xl text-[#3E4A43]">
-          Presented by The Gregorian Society
+          12 teams, two groups, one cup — run by The Gregorian Society in
+          memory of Abdur Rahim. Live scores and stats update automatically
+          as matches happen.
         </p>
       </section>
 
@@ -96,16 +99,16 @@ function MatchLine({ match }: { match: Awaited<ReturnType<typeof getMatches>>[nu
   return (
     <Link href={`/match/${match.id}`} className="block">
       <div className="flex items-center justify-between font-display text-2xl text-ink">
-        <span>{match.home_team?.name}</span>
+        <span>{homeName(match)}</span>
         <span className="tabular-nums px-2">
           {match.status === "upcoming"
             ? "vs"
             : `${match.home_score} – ${match.away_score}`}
         </span>
-        <span className="text-right">{match.away_team?.name}</span>
+        <span className="text-right">{awayName(match)}</span>
       </div>
       <p className="mt-2 text-xs text-[#5B6B62] uppercase tracking-wide">
-        {match.stage === "group" ? `Group ${match.group_name}` : match.stage} ·{" "}
+        {stageLabel(match)} ·{" "}
         {formatKickoff(match.kickoff_at)}
       </p>
     </Link>
