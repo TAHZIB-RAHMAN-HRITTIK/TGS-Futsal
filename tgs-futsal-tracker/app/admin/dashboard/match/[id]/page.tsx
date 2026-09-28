@@ -2,24 +2,36 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getMatchById, getPlayers } from "@/lib/data";
 import { saveAllMatchData, updateMatchStatus } from "@/lib/actions";
-import { homeName, awayName } from "@/lib/labels";
+import { homeName, awayName, stageLabel } from "@/lib/labels";
 import SavedBanner from "@/components/SavedBanner";
 import type { Player, MatchStat } from "@/lib/types";
 
 export const revalidate = 0;
 
 const STATS = [
-  { key: "goals",        label: "G"   },
-  { key: "assists",      label: "A"   },
-  { key: "through_cross",label: "T/C" },
-  { key: "tackles_won",  label: "TW"  },
-  { key: "interceptions",label: "INT" },
-  { key: "saves",        label: "SV"  },
-  { key: "fouls",        label: "FL"  },
-  { key: "yellow_cards", label: "YC"  },
-  { key: "red_cards",    label: "RC"  },
+  { key: "goals",         label: "G"   },
+  { key: "assists",       label: "A"   },
+  { key: "through_cross", label: "T/C" },
+  { key: "tackles_won",   label: "TW"  },
+  { key: "interceptions", label: "INT" },
+  { key: "saves",         label: "SV"  },
+  { key: "fouls",         label: "FL"  },
+  { key: "yellow_cards",  label: "YC"  },
+  { key: "red_cards",     label: "RC"  },
 ] as const;
 type StatKey = (typeof STATS)[number]["key"];
+
+const TIPS: [string, string][] = [
+  ["G",   "Goal"],
+  ["A",   "Assist"],
+  ["T/C", "Through Ball / Cross"],
+  ["TW",  "Tackle Won"],
+  ["INT", "Interception"],
+  ["SV",  "Save (goalkeeper)"],
+  ["FL",  "Foul committed"],
+  ["YC",  "Yellow Card"],
+  ["RC",  "Red Card"],
+];
 
 function val(stat: MatchStat | undefined, key: StatKey): number {
   return stat ? ((stat[key as keyof MatchStat] as number) ?? 0) : 0;
@@ -37,24 +49,26 @@ export default async function AdminMatchPage({
   const { match, stats } = data;
 
   const [homePlayers, awayPlayers] = await Promise.all([
-    match.home_team_id
-      ? getPlayers(match.home_team_id)
-      : Promise.resolve<Player[]>([]),
-    match.away_team_id
-      ? getPlayers(match.away_team_id)
-      : Promise.resolve<Player[]>([]),
+    match.home_team_id ? getPlayers(match.home_team_id) : Promise.resolve<Player[]>([]),
+    match.away_team_id ? getPlayers(match.away_team_id) : Promise.resolve<Player[]>([]),
   ]);
   const allPlayers = [...homePlayers, ...awayPlayers];
   const statById = Object.fromEntries(stats.map((s) => [s.player_id, s]));
 
-  // GK = kit_no 1 per team
-  const homeGk = homePlayers.find((p) => p.kit_no === 1);
-  const awayGk = awayPlayers.find((p) => p.kit_no === 1);
+  // GK default: player with existing clean_sheet=true, else kit_no=1
+  const findGk = (players: Player[]) =>
+    players.find((p) => statById[p.id]?.clean_sheet === true) ??
+    players.find((p) => p.kit_no === 1);
+
+  const homeGk = findGk(homePlayers);
+  const awayGk = findGk(awayPlayers);
+  const homeDefaultGkId = homeGk?.id ?? "";
+  const awayDefaultGkId = awayGk?.id ?? "";
   const homeCs = homeGk ? (statById[homeGk.id]?.clean_sheet ?? false) : false;
   const awayCs = awayGk ? (statById[awayGk.id]?.clean_sheet ?? false) : false;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       <SavedBanner show={searchParams.saved === "1"} />
 
       {/* Header */}
@@ -62,12 +76,15 @@ export default async function AdminMatchPage({
         <Link href="/admin/dashboard" className="text-sm text-turf hover:underline">
           ← Dashboard
         </Link>
-        <h1 className="font-display text-xl text-ink">
-          {homeName(match)} vs {awayName(match)}
-        </h1>
+        <div>
+          <h1 className="font-display text-xl text-ink">
+            {homeName(match)} vs {awayName(match)}
+          </h1>
+          <p className="text-xs text-[#5B6B62]">{stageLabel(match)}</p>
+        </div>
       </div>
 
-      {/* Status — instant, separate forms so no "Save All" needed */}
+      {/* Status — instant one-click, outside main form */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs font-semibold text-[#5B6B62] uppercase tracking-wide">
           Match status:
@@ -82,20 +99,20 @@ export default async function AdminMatchPage({
                   : "border-[#D6E3EC] hover:border-pitch"
               }`}
             >
-              {status === "live" ? "🔴 Live" : status.charAt(0).toUpperCase() + status.slice(1)}
+              {status === "live" ? "🔴 Live" : status === "upcoming" ? "⬜ Upcoming" : "✓ Completed"}
             </button>
           </form>
         ))}
       </div>
 
-      {/* ── MAIN FORM: everything saved with ONE button ── */}
-      <form action={saveAllMatchData.bind(null, match.id)} className="space-y-8">
+      {/* ── MAIN FORM ── */}
+      <form action={saveAllMatchData.bind(null, match.id)} className="space-y-6">
 
         {/* Score + MOTM */}
         <div className="bg-card p-5 flex flex-wrap items-end gap-6">
           <div className="flex items-end gap-3">
             <label className="text-sm font-medium">
-              {homeName(match)}
+              <span className="text-[#2C84B6]">{homeName(match)}</span>
               <input
                 type="number" name="home_score" min={0}
                 defaultValue={match.home_score}
@@ -104,7 +121,7 @@ export default async function AdminMatchPage({
             </label>
             <span className="font-display text-3xl pb-1.5 text-[#5B6B62]">–</span>
             <label className="text-sm font-medium">
-              {awayName(match)}
+              <span className="text-[#8A6500]">{awayName(match)}</span>
               <input
                 type="number" name="away_score" min={0}
                 defaultValue={match.away_score}
@@ -117,7 +134,7 @@ export default async function AdminMatchPage({
             <select
               name="motm_player_id"
               defaultValue={match.motm_player_id ?? ""}
-              className="block border border-[#D6E3EC] px-2 py-1.5 mt-1 min-w-[14rem] text-sm"
+              className="block border border-[#D6E3EC] px-2 py-1.5 mt-1 min-w-[14rem] text-sm bg-white"
             >
               <option value="">— None —</option>
               {allPlayers.map((p) => (
@@ -127,28 +144,44 @@ export default async function AdminMatchPage({
           </label>
         </div>
 
-        {/* Team stat tables */}
+        {/* Tips / Key */}
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs border border-[#D6E3EC] bg-white px-3 py-2.5">
+          <span className="font-semibold text-ink mr-1">Stat key →</span>
+          {TIPS.map(([abbr, full]) => (
+            <span key={abbr} className="text-[#5B6B62]">
+              <span className="font-semibold text-ink">{abbr}</span> = {full}
+            </span>
+          ))}
+        </div>
+
+        {/* Home team — sky-blue accent */}
         <TeamSection
           title={homeName(match)}
+          side="HOME"
           players={homePlayers}
           statById={statById}
-          gk={homeGk}
+          defaultGkId={homeDefaultGkId}
+          gkSelectName="home_gk_id"
           csName="home_clean_sheet"
-          gkHidden="home_gk_id"
           defaultCs={homeCs}
-        />
-        <TeamSection
-          title={awayName(match)}
-          players={awayPlayers}
-          statById={statById}
-          gk={awayGk}
-          csName="away_clean_sheet"
-          gkHidden="away_gk_id"
-          defaultCs={awayCs}
+          colorScheme="home"
         />
 
-        {/* Single save button */}
-        <div className="sticky bottom-0 bg-white border-t border-[#D6E3EC] py-4 flex justify-end">
+        {/* Away team — amber accent */}
+        <TeamSection
+          title={awayName(match)}
+          side="AWAY"
+          players={awayPlayers}
+          statById={statById}
+          defaultGkId={awayDefaultGkId}
+          gkSelectName="away_gk_id"
+          csName="away_clean_sheet"
+          defaultCs={awayCs}
+          colorScheme="away"
+        />
+
+        {/* Sticky Save All */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#D6E3EC] px-4 py-3 flex justify-end z-40">
           <button
             type="submit"
             className="bg-pitch text-bone px-10 py-3 font-semibold text-sm hover:bg-pitch-dark transition-colors"
@@ -161,44 +194,75 @@ export default async function AdminMatchPage({
   );
 }
 
+// ── Team section component ──────────────────────────────────────────────────
 function TeamSection({
-  title, players, statById, gk, csName, gkHidden, defaultCs,
+  title, side, players, statById, defaultGkId, gkSelectName, csName, defaultCs, colorScheme,
 }: {
   title: string;
+  side: "HOME" | "AWAY";
   players: Player[];
   statById: Record<string, MatchStat>;
-  gk: Player | undefined;
+  defaultGkId: string;
+  gkSelectName: string;
   csName: string;
-  gkHidden: string;
   defaultCs: boolean;
+  colorScheme: "home" | "away";
 }) {
   if (players.length === 0) return null;
 
+  const isHome = colorScheme === "home";
+  const borderColor = isHome ? "border-[#2C84B6]" : "border-[#F2B705]";
+  const bgColor    = isHome ? "bg-[#EEF5FA]"    : "bg-[#FFF8E7]";
+  const badgeBg    = isHome ? "bg-[#2C84B6] text-white" : "bg-[#F2B705] text-[#0E2A3F]";
+  const headColor  = isHome ? "text-[#2C84B6]"  : "text-[#8A6500]";
+
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="font-display text-lg text-turf">{title}</h2>
-        {/* ONE clean sheet tick per team — goes to GK only */}
-        <label className="flex items-center gap-2 text-sm cursor-pointer select-none bg-card px-3 py-1.5">
-          <input
-            type="checkbox" name={csName} defaultChecked={defaultCs}
-            className="w-4 h-4 accent-turf"
-          />
-          <span>
-            Clean Sheet{" "}
-            <span className="text-[#5B6B62] text-xs">
-              → GK: {gk?.name ?? "kit #1"}
-            </span>
+    <section className={`border-l-4 ${borderColor} ${bgColor} p-4 space-y-4`}>
+
+      {/* Section header: badge, team name, GK picker, clean sheet */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-bold tracking-widest px-2 py-0.5 ${badgeBg}`}>
+            {side}
           </span>
-          {gk && <input type="hidden" name={gkHidden} value={gk.id} />}
-        </label>
+          <h2 className={`font-display text-lg ${headColor}`}>{title}</h2>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Ask who the GK is */}
+          <label className="flex items-center gap-2 text-sm font-medium">
+            🧤 Goalkeeper:
+            <select
+              name={gkSelectName}
+              defaultValue={defaultGkId}
+              className="border border-[#D6E3EC] bg-white px-2 py-1 text-sm"
+            >
+              <option value="">— Select GK —</option>
+              {players.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </label>
+
+          {/* One clean-sheet tick per team → goes to selected GK */}
+          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+            <input
+              type="checkbox"
+              name={csName}
+              defaultChecked={defaultCs}
+              className="w-4 h-4 accent-turf"
+            />
+            Clean Sheet <span className="text-[#5B6B62] text-xs">(→ selected GK)</span>
+          </label>
+        </div>
       </div>
 
+      {/* Stats table */}
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
+        <table className="w-full border-collapse text-sm bg-white">
           <thead>
             <tr className="border-b-2 border-ink">
-              <th className="text-left font-semibold text-[#5B6B62] text-xs py-2 pr-4 whitespace-nowrap">
+              <th className="text-left font-semibold text-[#5B6B62] text-xs py-2 pr-4 whitespace-nowrap pl-2">
                 Player
               </th>
               {STATS.map((s) => (
@@ -212,11 +276,8 @@ function TeamSection({
             {players.map((p) => (
               <tr key={p.id} className="border-b border-[#D6E3EC] hover:bg-card">
                 <input type="hidden" name="player_ids" value={p.id} />
-                <td className="py-1.5 pr-4 font-medium whitespace-nowrap">
+                <td className="py-1.5 pr-4 pl-2 font-medium whitespace-nowrap">
                   {p.name}
-                  {p.kit_no === 1 && (
-                    <span className="ml-1.5 text-[10px] text-turf font-semibold">[GK]</span>
-                  )}
                 </td>
                 {STATS.map((s) => (
                   <td key={s.key} className="px-0.5 py-1">
@@ -225,7 +286,7 @@ function TeamSection({
                       name={`${p.id}_${s.key}`}
                       min={0}
                       defaultValue={val(statById[p.id], s.key)}
-                      className="w-10 border border-[#D6E3EC] text-center px-0.5 py-1 text-sm focus:border-turf focus:outline-none"
+                      className="w-10 border border-[#D6E3EC] text-center px-0.5 py-1 text-sm focus:border-turf focus:outline-none bg-white"
                     />
                   </td>
                 ))}

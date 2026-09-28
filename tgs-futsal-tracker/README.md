@@ -1,4 +1,4 @@
-# Abdur Rahim Memorial Futsal Tournament — Live Tracker
+# Gregorian Abdur Rahim Memorial Futsal Tournament — Live Tracker
 
 Real-time site for the TGS Gregorian Abdur Rahim Memorial Futsal Tournament:
 home page, groups, standings, fixtures, results, per-match player stats with

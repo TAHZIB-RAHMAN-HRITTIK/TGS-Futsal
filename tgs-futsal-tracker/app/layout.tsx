@@ -15,7 +15,7 @@ const body = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Abdur Rahim Memorial Futsal 2026",
+  title: "Gregorian Abdur Rahim Memorial Futsal 2026",
   description:
     "Live scores, fixtures, standings and player stats for the TGS Gregorian Abdur Rahim Memorial Futsal Tournament 2026.",
 };
@@ -23,7 +23,6 @@ export const metadata: Metadata = {
 const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/groups", label: "Groups" },
-  { href: "/teams", label: "Player List" },
   { href: "/standings", label: "Standings" },
   { href: "/fixtures", label: "Fixtures" },
   { href: "/results", label: "Results" },
@@ -47,7 +46,7 @@ export default function RootLayout({
             >
               <img src="/crest.png" alt="Gregorians crest" className="h-11 w-auto" />
               <span>
-                Abdur Rahim Memorial Futsal
+                Gregorian Abdur Rahim Memorial Futsal
                 <span className="block text-xs font-sans font-normal text-turf">
                   The Gregorian Society · 2026
                 </span>
@@ -73,7 +72,7 @@ export default function RootLayout({
 
         <footer className="border-t border-[#DAD6C8] mt-12">
           <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col sm:flex-row justify-between gap-2 text-sm text-[#5B6B62]">
-            <p>In memory of Abdur Rahim · Dbox Sports Complex, Oct 2 2026</p>
+            <p>In memory of Gregorian Abdur Rahim · Dbox Sports Complex, Oct 2 2026</p>
             <Link href="/admin" className="hover:text-ink">
               Match control
             </Link>
