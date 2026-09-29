@@ -36,7 +36,7 @@ export default async function MatchPage({ params }: { params: { id: string } }) 
           {stageLabel(match)} ·{" "}
           {formatKickoff(match.kickoff_at)}
         </p>
-        <div className="flex items-center justify-center gap-6 font-display text-3xl sm:text-4xl text-ink">
+        <div className="flex items-center justify-center gap-6 font-display text-2xl sm:text-3xl text-ink">
           <span className="text-right w-40 sm:w-56 truncate">{homeName(match)}</span>
           <span className="tabular-nums">
             {match.status === "upcoming" ? "vs" : `${match.home_score} – ${match.away_score}`}
