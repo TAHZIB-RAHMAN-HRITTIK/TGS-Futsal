@@ -46,9 +46,9 @@ export default function RootLayout({
             >
               <img src="/crest.png" alt="Gregorians crest" className="h-11 w-auto" />
               <span>
-                Gregorian Abdur Rahim Memorial Futsal 2026
+                Gregorian Abdur Rahim Memorial Futsal
                 <span className="block text-xs font-sans font-normal text-turf">
-                  The Gregorian Society
+                  The Gregorian Society · 2026
                 </span>
               </span>
             </Link>

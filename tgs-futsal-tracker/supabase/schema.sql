@@ -30,7 +30,9 @@ create table matches (
   kickoff_at timestamptz not null,
   venue text default 'Dbox Sports Complex',
   status text not null default 'upcoming' check (status in ('upcoming', 'live', 'completed')),
-  motm_player_id uuid references players(id)
+  motm_player_id uuid references players(id),
+  home_penalties  int,  -- null = no shootout; filled only for semi/final
+  away_penalties  int
 );
 
 create table match_stats (

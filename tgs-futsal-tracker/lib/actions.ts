@@ -39,6 +39,14 @@ export async function saveAllMatchData(matchId: string, formData: FormData) {
   const motmRaw   = formData.get("motm_player_id");
   const motmId    = motmRaw && motmRaw !== "" ? String(motmRaw) : null;
 
+  // Penalty shootout (knockouts only; empty input = no shootout)
+  const penParse = (k: string): number | null => {
+    const v = String(formData.get(k) ?? "").trim();
+    return v === "" ? null : Math.max(0, parseInt(v) || 0);
+  };
+  const homePen = penParse("home_penalties");
+  const awayPen = penParse("away_penalties");
+
   // Was the match live? → auto-complete after saving
   const { data: cur } = await sb
     .from("matches").select("status").eq("id", matchId).single();
@@ -51,11 +59,13 @@ export async function saveAllMatchData(matchId: string, formData: FormData) {
     .eq("match_id", matchId);
   const isUpdate = (existingCount ?? 0) > 0;
 
-  // Save score + MOTM (+ auto-complete if match was live)
+  // Save score + MOTM + optional penalties (+ auto-complete if live)
   const { error: mErr } = await sb.from("matches").update({
     home_score: homeScore,
     away_score: awayScore,
     motm_player_id: motmId,
+    home_penalties: homePen,
+    away_penalties: awayPen,
     ...(wasLive ? { status: "completed" } : {}),
   }).eq("id", matchId);
   if (mErr) throw mErr;

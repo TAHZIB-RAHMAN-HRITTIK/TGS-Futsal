@@ -43,8 +43,23 @@ export default async function MatchPage({ params }: { params: { id: string } }) 
           </span>
           <span className="text-left w-40 sm:w-56 truncate">{awayName(match)}</span>
         </div>
-        <div className="mt-3 flex justify-center">
+        <div className="mt-3 flex flex-col items-center gap-1">
           <StatusBadge status={match.status} />
+          {match.home_penalties != null && match.away_penalties != null && (
+            <p className="text-sm text-[#5B6B62]">
+              Penalties:{" "}
+              <span className="font-semibold text-ink tabular-nums">
+                {match.home_penalties} – {match.away_penalties}
+              </span>
+              {" "}·{" "}
+              <span className="font-semibold text-ink">
+                {match.home_penalties > match.away_penalties
+                  ? (match.home_team?.name ?? "Home")
+                  : (match.away_team?.name ?? "Away")}{" "}
+                win on penalties
+              </span>
+            </p>
+          )}
         </div>
         {match.motm_player && (
           <p className="mt-3 text-sm text-amber-700">

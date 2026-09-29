@@ -37,8 +37,13 @@ export default async function ResultsPage() {
           <li key={m.id} className="py-3">
             <Link href={`/match/${m.id}`} className="flex items-center justify-between gap-4">
               <span className="flex-1">{homeName(m)}</span>
-              <span className="font-display text-xl tabular-nums px-3">
+              <span className="font-display text-xl tabular-nums px-3 text-center">
                 {m.home_score} – {m.away_score}
+                {m.home_penalties != null && m.away_penalties != null && (
+                  <span className="block text-xs font-sans text-[#5B6B62]">
+                    pens {m.home_penalties}–{m.away_penalties}
+                  </span>
+                )}
               </span>
               <span className="flex-1 text-right">{awayName(m)}</span>
               <span className="text-xs text-[#5B6B62] whitespace-nowrap ml-4">

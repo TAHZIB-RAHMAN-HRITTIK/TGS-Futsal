@@ -68,7 +68,12 @@ export function resolveKnockouts(matches: Match[], teams: Team[]): Match[] {
     if (r.status !== "completed" || !r.home_team || !r.away_team) return undefined;
     if (r.home_score > r.away_score) return r.home_team;
     if (r.away_score > r.home_score) return r.away_team;
-    return undefined; // level — decide manually
+    // Regular-time draw — check penalty shootout
+    const hp = r.home_penalties ?? null;
+    const ap = r.away_penalties ?? null;
+    if (hp !== null && ap !== null && hp !== ap)
+      return hp > ap ? r.home_team : r.away_team;
+    return undefined; // still level — needs penalty input
   };
 
   const fromSemi = (label: Label): Team | undefined =>

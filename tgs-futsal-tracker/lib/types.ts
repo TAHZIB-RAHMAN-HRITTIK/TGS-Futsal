@@ -31,6 +31,8 @@ export interface Match {
   venue: string | null;
   status: MatchStatus;
   motm_player_id: string | null;
+  home_penalties: number | null;
+  away_penalties: number | null;
   // joined at query time
   home_team?: Team;
   away_team?: Team;

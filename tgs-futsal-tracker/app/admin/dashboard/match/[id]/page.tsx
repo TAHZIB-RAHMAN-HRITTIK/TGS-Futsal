@@ -132,6 +132,39 @@ export default async function AdminMatchPage({
               />
             </label>
           </div>
+          {/* Penalty shootout — shown for knockout matches only */}
+          {(match.stage === "semi" || match.stage === "final") && (
+            <div className="border-l-4 border-alert bg-[#FFF5F5] px-4 py-3 space-y-2">
+              <p className="text-xs font-semibold text-alert uppercase tracking-wide">
+                🥅 Penalty Shootout
+              </p>
+              <p className="text-xs text-[#5B6B62]">
+                Only fill in if the match ended level after regular time.
+                Leave blank if one team won in regular time.
+              </p>
+              <div className="flex items-center gap-3 flex-wrap">
+                <label className="text-xs font-medium">
+                  {homeName(match)}
+                  <input
+                    type="number" name="home_penalties" min={0}
+                    defaultValue={match.home_penalties ?? ""}
+                    placeholder="—"
+                    className="block w-14 border border-[#D6E3EC] text-center px-1 py-1 mt-1 font-display text-lg bg-white"
+                  />
+                </label>
+                <span className="font-display text-xl text-[#5B6B62] mt-4">–</span>
+                <label className="text-xs font-medium">
+                  {awayName(match)}
+                  <input
+                    type="number" name="away_penalties" min={0}
+                    defaultValue={match.away_penalties ?? ""}
+                    placeholder="—"
+                    className="block w-14 border border-[#D6E3EC] text-center px-1 py-1 mt-1 font-display text-lg bg-white"
+                  />
+                </label>
+              </div>
+            </div>
+          )}
           <div className="text-xs text-[#5B6B62] italic self-end pb-0.5">
             Clean sheet is awarded automatically<br />to the GK if the opponent scores 0.
           </div>
