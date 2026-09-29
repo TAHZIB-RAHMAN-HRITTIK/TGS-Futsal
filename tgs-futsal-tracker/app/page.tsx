@@ -118,13 +118,11 @@ export default async function HomePage() {
           <p className="font-display text-turf text-sm tracking-tight mb-1">
             Dbox Sports Complex · October 2, 2026
           </p>
-          <h1 className="font-display text-4xl sm:text-5xl leading-[1.05] text-ink">
-            Gregorian Abdur Rahim Memorial Futsal Tournament
+          <h1 className="font-display text-3xl sm:text-4xl leading-[1.05] text-ink">
+            Gregorian Abdur Rahim Memorial Futsal Tournament 2026
           </h1>
           <p className="mt-3 max-w-xl text-[#3E4A43]">
-            12 teams, two groups, one cup — run by The Gregorian Society in memory
-            of Gregorian Abdur Rahim. Live scores and stats update automatically as
-            matches happen.
+            Presented by The Gregorian Society
           </p>
         </section>
       )}
