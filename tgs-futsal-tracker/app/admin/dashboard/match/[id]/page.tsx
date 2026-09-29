@@ -27,7 +27,7 @@ const TIPS: [string, string][] = [
   ["T/C", "Through Ball / Cross"],
   ["TW",  "Tackle Won"],
   ["INT", "Interception"],
-  ["SV",  "Save (goalkeeper)"],
+  ["SV",  "Save (GK)"],
   ["FL",  "Foul committed"],
   ["YC",  "Yellow Card"],
   ["RC",  "Red Card"],
@@ -36,6 +36,12 @@ const TIPS: [string, string][] = [
 function val(stat: MatchStat | undefined, key: StatKey): number {
   return stat ? ((stat[key as keyof MatchStat] as number) ?? 0) : 0;
 }
+
+const BANNER: Record<string, string> = {
+  new:     "✓  Stats saved",
+  updated: "✓  Stats updated",
+  done:    "✓  Stats saved — match marked Completed",
+};
 
 export default async function AdminMatchPage({
   params,
@@ -52,30 +58,26 @@ export default async function AdminMatchPage({
     match.home_team_id ? getPlayers(match.home_team_id) : Promise.resolve<Player[]>([]),
     match.away_team_id ? getPlayers(match.away_team_id) : Promise.resolve<Player[]>([]),
   ]);
-  const allPlayers = [...homePlayers, ...awayPlayers];
-  const statById = Object.fromEntries(stats.map((s) => [s.player_id, s]));
+  const allPlayers  = [...homePlayers, ...awayPlayers];
+  const statById    = Object.fromEntries(stats.map((s) => [s.player_id, s]));
 
-  // GK default: player with existing clean_sheet=true, else kit_no=1
+  // Default GK: whoever has clean_sheet=true in saved stats, else kit_no=1
   const findGk = (players: Player[]) =>
     players.find((p) => statById[p.id]?.clean_sheet === true) ??
     players.find((p) => p.kit_no === 1);
 
-  const homeGk = findGk(homePlayers);
-  const awayGk = findGk(awayPlayers);
-  const homeDefaultGkId = homeGk?.id ?? "";
-  const awayDefaultGkId = awayGk?.id ?? "";
-  const homeCs = homeGk ? (statById[homeGk.id]?.clean_sheet ?? false) : false;
-  const awayCs = awayGk ? (statById[awayGk.id]?.clean_sheet ?? false) : false;
+  const homeDefaultGkId = findGk(homePlayers)?.id ?? "";
+  const awayDefaultGkId = findGk(awayPlayers)?.id ?? "";
+
+  const bannerMsg = BANNER[searchParams.saved ?? ""] ?? "";
 
   return (
     <div className="space-y-6 pb-24">
-      <SavedBanner show={searchParams.saved === "1"} />
+      <SavedBanner show={!!bannerMsg} message={bannerMsg} />
 
       {/* Header */}
       <div className="flex flex-wrap items-center gap-4">
-        <Link href="/admin/dashboard" className="text-sm text-turf hover:underline">
-          ← Dashboard
-        </Link>
+        <Link href="/admin/dashboard" className="text-sm text-turf hover:underline">← Dashboard</Link>
         <div>
           <h1 className="font-display text-xl text-ink">
             {homeName(match)} vs {awayName(match)}
@@ -84,11 +86,9 @@ export default async function AdminMatchPage({
         </div>
       </div>
 
-      {/* Status — instant one-click, outside main form */}
+      {/* Status — one-click, outside main form */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs font-semibold text-[#5B6B62] uppercase tracking-wide">
-          Match status:
-        </span>
+        <span className="text-xs font-semibold text-[#5B6B62] uppercase tracking-wide">Status:</span>
         {(["upcoming", "live", "completed"] as const).map((status) => (
           <form key={status} action={updateMatchStatus.bind(null, match.id, status)}>
             <button
@@ -103,6 +103,11 @@ export default async function AdminMatchPage({
             </button>
           </form>
         ))}
+        {match.status === "live" && (
+          <span className="text-xs text-[#5B6B62] italic">
+            (Saving will auto-complete this match)
+          </span>
+        )}
       </div>
 
       {/* ── MAIN FORM ── */}
@@ -114,8 +119,7 @@ export default async function AdminMatchPage({
             <label className="text-sm font-medium">
               <span className="text-[#2C84B6]">{homeName(match)}</span>
               <input
-                type="number" name="home_score" min={0}
-                defaultValue={match.home_score}
+                type="number" name="home_score" min={0} defaultValue={match.home_score}
                 className="block w-16 border border-[#D6E3EC] text-center px-2 py-1.5 mt-1 font-display text-2xl"
               />
             </label>
@@ -123,17 +127,18 @@ export default async function AdminMatchPage({
             <label className="text-sm font-medium">
               <span className="text-[#8A6500]">{awayName(match)}</span>
               <input
-                type="number" name="away_score" min={0}
-                defaultValue={match.away_score}
+                type="number" name="away_score" min={0} defaultValue={match.away_score}
                 className="block w-16 border border-[#D6E3EC] text-center px-2 py-1.5 mt-1 font-display text-2xl"
               />
             </label>
           </div>
+          <div className="text-xs text-[#5B6B62] italic self-end pb-0.5">
+            Clean sheet is awarded automatically<br />to the GK if the opponent scores 0.
+          </div>
           <label className="text-sm font-medium">
             Man of the Match ⭐
             <select
-              name="motm_player_id"
-              defaultValue={match.motm_player_id ?? ""}
+              name="motm_player_id" defaultValue={match.motm_player_id ?? ""}
               className="block border border-[#D6E3EC] px-2 py-1.5 mt-1 min-w-[14rem] text-sm bg-white"
             >
               <option value="">— None —</option>
@@ -144,9 +149,9 @@ export default async function AdminMatchPage({
           </label>
         </div>
 
-        {/* Tips / Key */}
+        {/* Stat key */}
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs border border-[#D6E3EC] bg-white px-3 py-2.5">
-          <span className="font-semibold text-ink mr-1">Stat key →</span>
+          <span className="font-semibold text-ink mr-1">Key →</span>
           {TIPS.map(([abbr, full]) => (
             <span key={abbr} className="text-[#5B6B62]">
               <span className="font-semibold text-ink">{abbr}</span> = {full}
@@ -154,33 +159,21 @@ export default async function AdminMatchPage({
           ))}
         </div>
 
-        {/* Home team — sky-blue accent */}
+        {/* HOME team — sky blue */}
         <TeamSection
-          title={homeName(match)}
-          side="HOME"
-          players={homePlayers}
-          statById={statById}
-          defaultGkId={homeDefaultGkId}
-          gkSelectName="home_gk_id"
-          csName="home_clean_sheet"
-          defaultCs={homeCs}
-          colorScheme="home"
+          title={homeName(match)} side="HOME" colorScheme="home"
+          players={homePlayers} statById={statById}
+          defaultGkId={homeDefaultGkId} gkSelectName="home_gk_id"
         />
 
-        {/* Away team — amber accent */}
+        {/* AWAY team — amber */}
         <TeamSection
-          title={awayName(match)}
-          side="AWAY"
-          players={awayPlayers}
-          statById={statById}
-          defaultGkId={awayDefaultGkId}
-          gkSelectName="away_gk_id"
-          csName="away_clean_sheet"
-          defaultCs={awayCs}
-          colorScheme="away"
+          title={awayName(match)} side="AWAY" colorScheme="away"
+          players={awayPlayers} statById={statById}
+          defaultGkId={awayDefaultGkId} gkSelectName="away_gk_id"
         />
 
-        {/* Sticky Save All */}
+        {/* Sticky Save button */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#D6E3EC] px-4 py-3 flex justify-end z-40">
           <button
             type="submit"
@@ -194,9 +187,8 @@ export default async function AdminMatchPage({
   );
 }
 
-// ── Team section component ──────────────────────────────────────────────────
 function TeamSection({
-  title, side, players, statById, defaultGkId, gkSelectName, csName, defaultCs, colorScheme,
+  title, side, players, statById, defaultGkId, gkSelectName, colorScheme,
 }: {
   title: string;
   side: "HOME" | "AWAY";
@@ -204,65 +196,43 @@ function TeamSection({
   statById: Record<string, MatchStat>;
   defaultGkId: string;
   gkSelectName: string;
-  csName: string;
-  defaultCs: boolean;
   colorScheme: "home" | "away";
 }) {
   if (players.length === 0) return null;
 
   const isHome = colorScheme === "home";
   const borderColor = isHome ? "border-[#2C84B6]" : "border-[#F2B705]";
-  const bgColor    = isHome ? "bg-[#EEF5FA]"    : "bg-[#FFF8E7]";
-  const badgeBg    = isHome ? "bg-[#2C84B6] text-white" : "bg-[#F2B705] text-[#0E2A3F]";
-  const headColor  = isHome ? "text-[#2C84B6]"  : "text-[#8A6500]";
+  const bgColor     = isHome ? "bg-[#EEF5FA]"     : "bg-[#FFF8E7]";
+  const badgeBg     = isHome ? "bg-[#2C84B6] text-white" : "bg-[#F2B705] text-[#0E2A3F]";
+  const headColor   = isHome ? "text-[#2C84B6]"   : "text-[#8A6500]";
 
   return (
     <section className={`border-l-4 ${borderColor} ${bgColor} p-4 space-y-4`}>
-
-      {/* Section header: badge, team name, GK picker, clean sheet */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className={`text-[10px] font-bold tracking-widest px-2 py-0.5 ${badgeBg}`}>
-            {side}
-          </span>
+          <span className={`text-[10px] font-bold tracking-widest px-2 py-0.5 ${badgeBg}`}>{side}</span>
           <h2 className={`font-display text-lg ${headColor}`}>{title}</h2>
         </div>
-
-        <div className="flex flex-wrap items-center gap-4">
-          {/* Ask who the GK is */}
-          <label className="flex items-center gap-2 text-sm font-medium">
-            🧤 Goalkeeper:
-            <select
-              name={gkSelectName}
-              defaultValue={defaultGkId}
-              className="border border-[#D6E3EC] bg-white px-2 py-1 text-sm"
-            >
-              <option value="">— Select GK —</option>
-              {players.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </label>
-
-          {/* One clean-sheet tick per team → goes to selected GK */}
-          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-            <input
-              type="checkbox"
-              name={csName}
-              defaultChecked={defaultCs}
-              className="w-4 h-4 accent-turf"
-            />
-            Clean Sheet <span className="text-[#5B6B62] text-xs">(→ selected GK)</span>
-          </label>
-        </div>
+        {/* GK picker — tells the system who gets auto clean sheet */}
+        <label className="flex items-center gap-2 text-sm font-medium">
+          🧤 Goalkeeper:
+          <select
+            name={gkSelectName} defaultValue={defaultGkId}
+            className="border border-[#D6E3EC] bg-white px-2 py-1 text-sm"
+          >
+            <option value="">— Select GK —</option>
+            {players.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </label>
       </div>
 
-      {/* Stats table */}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm bg-white">
           <thead>
             <tr className="border-b-2 border-ink">
-              <th className="text-left font-semibold text-[#5B6B62] text-xs py-2 pr-4 whitespace-nowrap pl-2">
+              <th className="text-left font-semibold text-[#5B6B62] text-xs py-2 pr-4 pl-2 whitespace-nowrap">
                 Player
               </th>
               {STATS.map((s) => (
@@ -276,9 +246,7 @@ function TeamSection({
             {players.map((p) => (
               <tr key={p.id} className="border-b border-[#D6E3EC] hover:bg-card">
                 <input type="hidden" name="player_ids" value={p.id} />
-                <td className="py-1.5 pr-4 pl-2 font-medium whitespace-nowrap">
-                  {p.name}
-                </td>
+                <td className="py-1.5 pr-4 pl-2 font-medium whitespace-nowrap">{p.name}</td>
                 {STATS.map((s) => (
                   <td key={s.key} className="px-0.5 py-1">
                     <input

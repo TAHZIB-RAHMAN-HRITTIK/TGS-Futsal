@@ -15,11 +15,8 @@ export async function loginAdmin(formData: FormData) {
   const password = formData.get("password");
   if (password !== process.env.ADMIN_PASSWORD) redirect("/admin?error=1");
   cookies().set(COOKIE_NAME, process.env.ADMIN_PASSWORD!, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30, // 30 days — one login, stays in
+    httpOnly: true, secure: true, sameSite: "lax", path: "/",
+    maxAge: 60 * 60 * 24 * 30,
   });
   redirect("/admin/dashboard");
 }
@@ -34,42 +31,61 @@ export async function updateMatchStatus(matchId: string, status: MatchStatus) {
   revalidatePath("/", "layout");
 }
 
-/** Save ALL match data in one go: score, MOTM, all 9+9 player stats. */
 export async function saveAllMatchData(matchId: string, formData: FormData) {
   const sb = supabaseAdmin();
 
-  const motmRaw = formData.get("motm_player_id");
-  const { error: mErr } = await sb
-    .from("matches")
-    .update({
-      home_score: num(formData, "home_score"),
-      away_score: num(formData, "away_score"),
-      motm_player_id: motmRaw && motmRaw !== "" ? String(motmRaw) : null,
-    })
-    .eq("id", matchId);
+  const homeScore = num(formData, "home_score");
+  const awayScore = num(formData, "away_score");
+  const motmRaw   = formData.get("motm_player_id");
+  const motmId    = motmRaw && motmRaw !== "" ? String(motmRaw) : null;
+
+  // Was the match live? → auto-complete after saving
+  const { data: cur } = await sb
+    .from("matches").select("status").eq("id", matchId).single();
+  const wasLive = cur?.status === "live";
+
+  // Were stats already entered? → "updated" vs "saved"
+  const { count: existingCount } = await sb
+    .from("match_stats")
+    .select("*", { count: "exact", head: true })
+    .eq("match_id", matchId);
+  const isUpdate = (existingCount ?? 0) > 0;
+
+  // Save score + MOTM (+ auto-complete if match was live)
+  const { error: mErr } = await sb.from("matches").update({
+    home_score: homeScore,
+    away_score: awayScore,
+    motm_player_id: motmId,
+    ...(wasLive ? { status: "completed" } : {}),
+  }).eq("id", matchId);
   if (mErr) throw mErr;
 
-  const playerIds = formData.getAll("player_ids") as string[];
-  const homeGkId = String(formData.get("home_gk_id") ?? "");
-  const awayGkId = String(formData.get("away_gk_id") ?? "");
-  const homeCs = formData.get("home_clean_sheet") === "on";
-  const awayCs = formData.get("away_clean_sheet") === "on";
+  // GK ids — needed for auto clean sheet
+  const homeGkId = String(formData.get("home_gk_id") ?? "").trim();
+  const awayGkId = String(formData.get("away_gk_id") ?? "").trim();
 
+  // Auto clean sheet: GK keeps clean sheet if the OPPOSING team scored 0
+  //   home GK → clean sheet when away_score === 0
+  //   away GK → clean sheet when home_score === 0
+  const homeGkCs = awayScore === 0 && homeGkId !== "";
+  const awayGkCs = homeScore === 0 && awayGkId !== "";
+
+  const playerIds = formData.getAll("player_ids") as string[];
   const stats = playerIds.map((pid) => ({
     match_id: matchId,
     player_id: pid,
-    goals: num(formData, `${pid}_goals`),
-    assists: num(formData, `${pid}_assists`),
+    goals:         num(formData, `${pid}_goals`),
+    assists:       num(formData, `${pid}_assists`),
     through_cross: num(formData, `${pid}_through_cross`),
-    tackles_won: num(formData, `${pid}_tackles_won`),
+    tackles_won:   num(formData, `${pid}_tackles_won`),
     interceptions: num(formData, `${pid}_interceptions`),
-    saves: num(formData, `${pid}_saves`),
-    fouls: num(formData, `${pid}_fouls`),
-    yellow_cards: num(formData, `${pid}_yellow_cards`),
-    red_cards: num(formData, `${pid}_red_cards`),
-    // Clean sheet only goes to the GK (kit #1) of each team
+    saves:         num(formData, `${pid}_saves`),
+    fouls:         num(formData, `${pid}_fouls`),
+    yellow_cards:  num(formData, `${pid}_yellow_cards`),
+    red_cards:     num(formData, `${pid}_red_cards`),
     clean_sheet:
-      pid === homeGkId ? homeCs : pid === awayGkId ? awayCs : false,
+      pid === homeGkId ? homeGkCs :
+      pid === awayGkId ? awayGkCs : false,
   }));
 
   if (stats.length > 0) {
@@ -80,27 +96,20 @@ export async function saveAllMatchData(matchId: string, formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect(`/admin/dashboard/match/${matchId}?saved=1`);
+
+  const flag = wasLive ? "done" : isUpdate ? "updated" : "new";
+  redirect(`/admin/dashboard/match/${matchId}?saved=${flag}`);
 }
 
-/** Reads auto-resolved knockout teams from current standings and writes them
- *  permanently to the DB. Only fills in slots still null (never overwrites a
- *  team set by hand). Safe to run multiple times. */
 export async function generateKnockouts() {
   const sb = supabaseAdmin();
-  const allMatches = await getMatches(); // already includes resolveKnockouts
-
-  // Raw knockout rows so we know which team_ids are still null in DB
+  const allMatches = await getMatches();
   const { data: raw } = await sb
-    .from("matches")
-    .select("id, home_team_id, away_team_id")
+    .from("matches").select("id, home_team_id, away_team_id")
     .in("stage", ["semi", "final"]);
-
   const rawById = Object.fromEntries((raw ?? []).map((r) => [r.id, r]));
 
-  for (const m of allMatches.filter(
-    (m) => m.stage === "semi" || m.stage === "final"
-  )) {
+  for (const m of allMatches.filter(m => m.stage === "semi" || m.stage === "final")) {
     const r = rawById[m.id];
     if (!r) continue;
     const upd: { home_team_id?: string; away_team_id?: string } = {};
