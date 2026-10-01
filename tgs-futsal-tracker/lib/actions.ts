@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "./supabase";
 import { getMatches } from "./data";
+import { KNOCKOUT_FIXTURES } from "./knockouts";
 import type { MatchStatus } from "./types";
 
 const COOKIE_NAME = "tgs_admin";
@@ -113,6 +114,24 @@ export async function saveAllMatchData(matchId: string, formData: FormData) {
 
 export async function generateKnockouts() {
   const sb = supabaseAdmin();
+
+  // Create any semi-final / final rows that don't exist yet (teams TBD).
+  const { data: existing, error: exErr } = await sb
+    .from("matches").select("stage, home_label")
+    .in("stage", ["semi", "final"]);
+  if (exErr) throw exErr;
+  const missing = KNOCKOUT_FIXTURES.filter((k) =>
+    !(existing ?? []).some((e) =>
+      e.stage === k.stage && (k.stage === "final" || e.home_label === k.home_label)
+    )
+  );
+  if (missing.length > 0) {
+    const { error } = await sb.from("matches").insert(
+      missing.map((k) => ({ ...k, venue: "Dbox Sports Complex", status: "upcoming" }))
+    );
+    if (error) throw error;
+  }
+
   const allMatches = await getMatches();
   const { data: raw } = await sb
     .from("matches").select("id, home_team_id, away_team_id")

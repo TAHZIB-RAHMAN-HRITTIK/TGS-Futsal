@@ -21,7 +21,7 @@ export default async function AdminDashboard({
     <div className="space-y-8">
       <SavedBanner
         show={searchParams.kgen === "1"}
-        message="✓  Knockout teams locked in from current standings"
+        message="✓  Knockouts created and teams locked in from current standings"
       />
 
       {/* Header */}
@@ -62,16 +62,17 @@ export default async function AdminDashboard({
               }`}
             >
               {groupsDone
-                ? "⚡ Auto-fill from standings"
-                : "Auto-fill from standings (run after group stage)"}
+                ? "⚡ Create & fill from standings"
+                : "Create & fill from standings (run after group stage)"}
             </button>
           </form>
         </div>
 
         {!groupsDone && (
           <p className="text-xs text-[#5B6B62]">
-            Group A 1st vs Group B 2nd and Group B 1st vs Group A 2nd will be
-            filled in automatically once all 30 group matches are completed.
+            Creates SF1 (Group A 1st vs Group B 2nd), SF2 (Group B 1st vs Group A
+            2nd) and the Final if they&apos;re missing. Teams are filled in once all
+            30 group matches are completed.
           </p>
         )}
 

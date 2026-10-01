@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getMatches } from "@/lib/data";
 import StatusBadge from "@/components/StatusBadge";
 import LiveRefresher from "@/components/LiveRefresher";
+import Bracket from "@/components/Bracket";
 
 export const revalidate = 0;
 
@@ -18,7 +19,8 @@ function formatKickoff(iso: string) {
 const STAGE_LABEL = { group: "Group Stage", semi: "Semi-Final", final: "Final" };
 
 export default async function FixturesPage() {
-  const matches = (await getMatches()).filter((m) => m.status !== "completed");
+  const allMatches = await getMatches();
+  const matches = allMatches.filter((m) => m.status !== "completed");
 
   const byStage = matches.reduce<Record<string, typeof matches>>((acc, m) => {
     (acc[m.stage] ??= []).push(m);
@@ -29,6 +31,7 @@ export default async function FixturesPage() {
     <div className="space-y-10">
       <LiveRefresher />
       <h1 className="font-display text-3xl text-ink">Fixtures</h1>
+      <Bracket matches={allMatches} />
       {matches.length === 0 && (
         <p className="text-sm text-[#5B6B62]">No fixtures scheduled yet.</p>
       )}

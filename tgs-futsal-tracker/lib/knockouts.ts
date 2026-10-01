@@ -3,6 +3,30 @@ import { buildStandings, sameRecord } from "./standings";
 
 type Label = string | null | undefined;
 
+/**
+ * The knockout matches the admin "Auto-fill from standings" button creates
+ * if they don't exist yet. Times are Dhaka time (UTC+6). SF1 must kick off
+ * before SF2 — "Winner SF1" is the earlier semi.
+ */
+export const KNOCKOUT_FIXTURES = [
+  { stage: "semi",  home_label: "Group A 1st", away_label: "Group B 2nd", kickoff_at: "2026-10-02T18:20:00+06:00" },
+  { stage: "semi",  home_label: "Group B 1st", away_label: "Group A 2nd", kickoff_at: "2026-10-02T19:00:00+06:00" },
+  { stage: "final", home_label: "Winner SF1",  away_label: "Winner SF2",  kickoff_at: "2026-10-02T20:00:00+06:00" },
+] as const;
+
+/** Winner of a completed match (penalties count when level), or undefined if undecided. */
+export function matchWinner(m: Match): Team | undefined {
+  if (m.status !== "completed" || !m.home_team || !m.away_team) return undefined;
+  if (m.home_score > m.away_score) return m.home_team;
+  if (m.away_score > m.home_score) return m.away_team;
+  // Regular-time draw — check penalty shootout
+  const hp = m.home_penalties ?? null;
+  const ap = m.away_penalties ?? null;
+  if (hp !== null && ap !== null && hp !== ap)
+    return hp > ap ? m.home_team : m.away_team;
+  return undefined; // still level — needs penalty input
+}
+
 function groupDone(matches: Match[], g: GroupName) {
   const groupMatches = matches.filter(
     (m) => m.stage === "group" && m.group_name === g
@@ -64,16 +88,7 @@ export function resolveKnockouts(matches: Match[], teams: Team[]): Match[] {
   const winnerOf = (index: number): Team | undefined => {
     const semi = semis[index];
     if (!semi) return undefined;
-    const r = resolvedSemis.get(semi.id)!;
-    if (r.status !== "completed" || !r.home_team || !r.away_team) return undefined;
-    if (r.home_score > r.away_score) return r.home_team;
-    if (r.away_score > r.home_score) return r.away_team;
-    // Regular-time draw — check penalty shootout
-    const hp = r.home_penalties ?? null;
-    const ap = r.away_penalties ?? null;
-    if (hp !== null && ap !== null && hp !== ap)
-      return hp > ap ? r.home_team : r.away_team;
-    return undefined; // still level — needs penalty input
+    return matchWinner(resolvedSemis.get(semi.id)!);
   };
 
   const fromSemi = (label: Label): Team | undefined =>
