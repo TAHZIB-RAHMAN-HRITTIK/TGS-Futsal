@@ -27,6 +27,7 @@ const NAV_LINKS = [
   { href: "/fixtures", label: "Fixtures" },
   { href: "/results", label: "Results" },
   { href: "/players", label: "Player Stats" },
+  { href: "/summary", label: "Summary" },
   { href: "/squads", label: "Squads" },
 ];
 
